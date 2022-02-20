@@ -1,4 +1,5 @@
 ﻿using APICatalago.Models.Context;
+using APICatalago.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,18 +10,40 @@ namespace APICatalago.Controllers
     public class CategoriasController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IConfiguration _configuration;
+        private readonly ILogger _logger;
 
-        public CategoriasController(AppDbContext context)
+        public CategoriasController(AppDbContext context, IConfiguration config, ILogger<CategoriasController> logger)
         {
             _context = context;
+            _configuration = config;
+            _logger = logger;  
+        }
+
+        [HttpGet("autor")]
+        public string GetAutor()
+        {
+            var autor = _configuration["autor"];
+            var conexao = _configuration["ConnectionStrings:DefaultConnection"];
+
+            return $"Autor: {autor} - Conexão: {conexao}";
+        }
+
+        [HttpGet("saudacao/{nome}")]
+        public ActionResult<string> GetSaudacao([FromServices] IMeuServico meuservico,
+           string nome)
+        {
+            return meuservico.Saudacao(nome);
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<Categoria>> Get()
+        public async Task<ActionResult<IEnumerable<Categoria>>> GetAsync()
         {
+            _logger.LogInformation("<===========GET api/categorias ====================>");
+
             try
             {
-                return _context.Categorias.AsNoTracking().ToList();
+                return await _context.Categorias.AsNoTracking().ToListAsync();
             }
             catch (Exception)
             {
@@ -29,19 +52,24 @@ namespace APICatalago.Controllers
         }
 
         [HttpGet("produtos")]
-        public ActionResult<IEnumerable<Categoria>> GetCategoriasProdutos()
+        public async Task<ActionResult<IEnumerable<Categoria>>> GetCategoriasProdutosAsync()
         {
-            return _context.Categorias.Include(x=> x.Produtos).ToList();
+            _logger.LogInformation("<===========GET api/categorias/produtos ====================>");
+
+            return await _context.Categorias.Include(x=> x.Produtos).ToListAsync();
         }
 
-        [HttpGet("{id}", Name = "ObterCategoria")]
-        public ActionResult<Categoria> Get(int id)
+        [HttpGet("{id:int:min(1)}", Name = "ObterCategoria")]
+        public async Task<ActionResult<Categoria>> GetIdAsync(int id)
         {
+            _logger.LogInformation($"<===========GET api/categorias/id = {id} ====================>");
+
             try
             {
-                var categoria = _context.Categorias.AsNoTracking().FirstOrDefault(x => x.Id == id);
+                var categoria = await _context.Categorias.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
                 if (categoria == null)
                 {
+                    _logger.LogInformation($"<===========GET api/categorias/id = {id} NOT FOUND ====================>");
                     return NotFound($"A categoria com id={id} não foi encontrada");
                 }
                 return categoria;

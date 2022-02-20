@@ -1,4 +1,5 @@
-﻿using APICatalago.Models.Context;
+﻿using APICatalago.Filters;
+using APICatalago.Models.Context;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,15 +17,16 @@ namespace APICatalago.Controllers
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<Produto>> Get()
+        [ServiceFilter(typeof(ApiLoggingFilter))]
+        public async Task<ActionResult<IEnumerable<Produto>>> GetAsync()
         {
-            return _context.Produtos.AsNoTracking().ToList();
+            return await _context.Produtos.AsNoTracking().ToListAsync();
         }
 
-        [HttpGet("{id}", Name = "ObterProduto")]
-        public ActionResult<Produto> Get(int id)
+        [HttpGet("{id:int:min(1)}", Name = "ObterProduto")]
+        public async Task<ActionResult<Produto>> GetIdAsync(int id)
         {
-            var produto = _context.Produtos.AsNoTracking().FirstOrDefault(x => x.Id == id);
+            var produto = await _context.Produtos.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
             if (produto == null)
             {
                 return NotFound();
