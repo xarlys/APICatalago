@@ -1,8 +1,5 @@
-﻿using APICatalago.Models.Context;
-using APICatalago.Repository;
-using APICatalago.Services;
+﻿using APICatalago.Repository;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace APICatalago.Controllers
 {
@@ -10,7 +7,7 @@ namespace APICatalago.Controllers
     [ApiController]
     public class CategoriasController : ControllerBase
     {
-        private readonly IUnitOfWork _uof;       
+        private readonly IUnitOfWork _uof;
         private readonly IConfiguration _configuration;
         private readonly ILogger _logger;
 
@@ -18,7 +15,7 @@ namespace APICatalago.Controllers
         {
             _uof = context;
             _configuration = config;
-            _logger = logger;  
+            _logger = logger;
         }
 
         [HttpGet("autor")]
