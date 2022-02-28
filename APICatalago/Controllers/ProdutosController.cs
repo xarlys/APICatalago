@@ -22,9 +22,9 @@ namespace APICatalago.Controllers
         }
 
         [HttpGet("menorpreco")]
-        public ActionResult<IEnumerable<ProdutoDTO>> GetProdutosPrecos()
+        public async Task<ActionResult<IEnumerable<ProdutoDTO>>> GetProdutosPorPreco()
         {
-            var produtos = _uof.ProdutoRepository.GetProdutosPorPreco().ToList();
+            var produtos = await _uof.ProdutoRepository.GetProdutosPorPreco();
             var produtosDTO = _mapper.Map<List<ProdutoDTO>>(produtos);
 
             return produtosDTO;
@@ -32,31 +32,23 @@ namespace APICatalago.Controllers
 
         [HttpGet]
         [ServiceFilter(typeof(ApiLoggingFilter))]
-        public ActionResult<IEnumerable<ProdutoDTO>> Get([FromQuery] Parameters produtosParameter)
+        public async Task<ActionResult<IEnumerable<ProdutoDTO>>> Get([FromQuery] Parameters produtosParameter)
         {
 
-            var resultProdutos = _uof.ProdutoRepository.GetProdutos(produtosParameter);
+            var resultProdutos = await _uof.ProdutoRepository.GetProdutos(produtosParameter);
 
             var metadata = new { resultProdutos.TotalCount, resultProdutos.PageSize, resultProdutos.CurrentPage, resultProdutos.TotalPages, resultProdutos.HasNext, resultProdutos.HasPrevious };
 
             Response.Headers.Add("X-Pagination", JsonSerializer.Serialize(metadata));
             
             var produtosDTO = _mapper.Map<List<ProdutoDTO>>(resultProdutos);
-            return produtosDTO;
-
-            //var produtos = _uof.ProdutoRepository.Get().ToList();
-            //var produtosDTO = _mapper.Map<List<ProdutoDTO>>(produtos);
-
-            //return produtosDTO;
-
-            //return _uof.ProdutoRepository.Get().ToList();
-            //return _context.Produtos.AsNoTracking().ToList();
+            return produtosDTO;           
         }
 
         [HttpGet("{id:int:min(1)}", Name = "ObterProduto")]
-        public ActionResult<ProdutoDTO> GetId(int id)
+        public async Task<ActionResult<ProdutoDTO>> GetId(int id)
         {
-            var produto = _uof.ProdutoRepository.GetById(p => p.Id == id);
+            var produto = await _uof.ProdutoRepository.GetById(p => p.Id == id);
             if (produto == null)
             {
                 return NotFound();
@@ -67,31 +59,13 @@ namespace APICatalago.Controllers
             return produtoDTO;
         }
 
-        // metodo asyncrono
-        //[HttpGet]
-        //[ServiceFilter(typeof(ApiLoggingFilter))]
-        //public async Task<ActionResult<IEnumerable<Produto>>> GetAsync()
-        //{
-        //    return await _uof.Produtos.AsNoTracking().ToListAsync();
-        //}
-
-        //[HttpGet("{id:int:min(1)}", Name = "ObterProduto")]
-        //public async Task<ActionResult<Produto>> GetIdAsync(int id)
-        //{
-        //    var produto = await _uof.Produtos.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
-        //    if (produto == null)
-        //    {
-        //        return NotFound();
-        //    }
-        //    return produto;
-        //}
-
+       
         [HttpPost]
-        public ActionResult Post([FromBody] ProdutoDTO produtoDTO)
+        public async Task<ActionResult> Post([FromBody] ProdutoDTO produtoDTO)
         {
             var produto = _mapper.Map<Produto>(produtoDTO);
             _uof.ProdutoRepository.Add(produto);
-            _uof.Commit();
+            await _uof.Commit();
 
             var returnProdutoDTO = _mapper.Map<ProdutoDTO>(produto);
 
@@ -99,7 +73,7 @@ namespace APICatalago.Controllers
         }
 
         [HttpPut("{id}")]
-        public ActionResult Put(int id, [FromBody] ProdutoDTO produtoDTO)
+        public async Task<ActionResult> Put(int id, [FromBody] ProdutoDTO produtoDTO)
         {
             if (id != produtoDTO.Id)
             {
@@ -109,15 +83,15 @@ namespace APICatalago.Controllers
             var produto = _mapper.Map<Produto>(produtoDTO);
 
             _uof.ProdutoRepository.Update(produto);
-            _uof.Commit();
+            await _uof.Commit();
             return Ok();
         }
 
         [HttpDelete("{id}")]
-        public ActionResult<ProdutoDTO> Delete(int id)
+        public async Task<ActionResult<ProdutoDTO>> Delete(int id)
         {
             //var produto = _uof.Produtos.FirstOrDefault(p => p.Id == id); //sempre vai no banco de dados
-            var produto = _uof.ProdutoRepository.GetById(p => p.Id == id); // vai na memória primeiro, mas só pode ser usado se o Id for a chave primária
+            var produto = await _uof.ProdutoRepository.GetById(p => p.Id == id); // vai na memória primeiro, mas só pode ser usado se o Id for a chave primária
 
             if (produto == null)
             {
@@ -127,9 +101,31 @@ namespace APICatalago.Controllers
             var returnProdutoDTO = _mapper.Map<ProdutoDTO>(produto);
 
             _uof.ProdutoRepository.Delete(produto);
-            _uof.Commit();
+            await _uof.Commit();
             return returnProdutoDTO;
         }
 
     }
 }
+
+
+
+
+// metodo asyncrono
+//[HttpGet]
+//[ServiceFilter(typeof(ApiLoggingFilter))]
+//public async Task<ActionResult<IEnumerable<Produto>>> GetAsync()
+//{
+//    return await _uof.Produtos.AsNoTracking().ToListAsync();
+//}
+
+//[HttpGet("{id:int:min(1)}", Name = "ObterProduto")]
+//public async Task<ActionResult<Produto>> GetIdAsync(int id)
+//{
+//    var produto = await _uof.Produtos.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+//    if (produto == null)
+//    {
+//        return NotFound();
+//    }
+//    return produto;
+//}

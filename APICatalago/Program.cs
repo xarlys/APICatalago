@@ -6,6 +6,7 @@ using APICatalago.Models.Context;
 using APICatalago.Repository;
 using APICatalago.Services;
 using AutoMapper;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -36,6 +37,10 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseSqlServer(connectionString));
 
+
+//add Identity framework core //
+builder.Services.AddIdentity<IdentityUser, IdentityRole>().AddEntityFrameworkStores<AppDbContext>().AddDefaultTokenProviders();
+
 // add logger
 builder.Logging.AddProvider(new CustomLoggerProvider(new CustomLoggerProviderConfiguration
 {
@@ -58,6 +63,10 @@ app.ConfigureExceptionHandler();
 
 app.UseHttpsRedirection();
 
+// middleware de authentication
+app.UseAuthentication();
+
+// middleware de authorization
 app.UseAuthorization();
 
 app.MapControllers();

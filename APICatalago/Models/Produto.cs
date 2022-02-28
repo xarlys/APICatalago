@@ -17,10 +17,10 @@ namespace APICatalago
         [MaxLength(300)]
         public string? Descricao { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "O preço é obrigatório")]
         [DataType(DataType.Currency)]
         [Column(TypeName = "decimal(10,2)")]
-        //[Range(1,100000), ErrorMessage = "O Preço deve estar entre {1} e {2}"]
+        [Range(1,100000, ErrorMessage = "O Preço deve estar entre {1} e {2}")]
         public decimal Preco { get; set; }
 
         [Required]

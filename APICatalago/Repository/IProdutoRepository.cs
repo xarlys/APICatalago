@@ -4,8 +4,8 @@ namespace APICatalago.Repository
 {
     public interface IProdutoRepository : IRepository<Produto>
     {
-        PagedList<Produto> GetProdutos(Parameters produtos);
+        Task<PagedList<Produto>> GetProdutos(Parameters produtos);
         // metodo específico do repository
-        IEnumerable<Produto> GetProdutosPorPreco();
+        Task<IEnumerable<Produto>> GetProdutosPorPreco();
     }
 }

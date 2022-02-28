@@ -1,5 +1,9 @@
-﻿using APICatalago.Repository;
+﻿using APICatalago.Pagination;
+using APICatalago.Repository;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace APICatalago.Controllers
 {
@@ -10,8 +14,9 @@ namespace APICatalago.Controllers
         private readonly IUnitOfWork _uof;
         private readonly IConfiguration _configuration;
         private readonly ILogger _logger;
+        private readonly IMapper? _mapper;
 
-        public CategoriasController(IUnitOfWork context, IConfiguration config, ILogger<CategoriasController> logger)
+        public CategoriasController(IMapper mapper, IUnitOfWork context, IConfiguration config, ILogger<CategoriasController> logger)
         {
             _uof = context;
             _configuration = config;
@@ -28,13 +33,28 @@ namespace APICatalago.Controllers
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<Categoria>> Get()
+        public async Task<ActionResult<IEnumerable<Categoria>>> Get([FromQuery] Parameters categoriasParameters)
         {
             _logger.LogInformation("<===========GET api/categorias ====================>");
 
             try
             {
-                return _uof.CategoriaRepository.Get().ToList();
+                var categorias = await _uof.CategoriaRepository.GetCategorias(categoriasParameters);
+
+                var metadata = new
+                {
+                    categorias.TotalCount,
+                    categorias.PageSize,
+                    categorias.CurrentPage,
+                    categorias.TotalPages,
+                    categorias.HasNext,
+                    categorias.HasPrevious
+                };
+
+                Response.Headers.Add("X-Pagination", JsonSerializer.Serialize(metadata));
+                
+                return categorias;
+                //return await _uof.CategoriaRepository.Get().ToListAsync();
             }
             catch (Exception)
             {
@@ -43,21 +63,25 @@ namespace APICatalago.Controllers
         }
 
         [HttpGet("produtos")]
-        public ActionResult<IEnumerable<Categoria>> GetCategoriasProdutos()
-        {
-            _logger.LogInformation("<===========GET api/categorias/produtos ====================>");
 
-            return _uof.CategoriaRepository.GetCategoriasProdutos().ToList();
+        public async Task<ActionResult<IEnumerable<Categoria>>> GetCategoriasProdutos()
+        {
+            var categorias = await _uof.CategoriaRepository
+                             .GetCategoriasProdutos();
+
+            var resultCategorias = _mapper.Map<List<Categoria>>(categorias);
+
+            return resultCategorias;
         }
 
         [HttpGet("{id:int:min(1)}", Name = "ObterCategoria")]
-        public ActionResult<Categoria> GetId(int id)
+        public async Task<ActionResult<Categoria>> GetId(int id)
         {
             _logger.LogInformation($"<===========GET api/categorias/id = {id} ====================>");
 
             try
             {
-                var categoria = _uof.CategoriaRepository.GetById(x => x.Id == id);
+                var categoria = await _uof.CategoriaRepository.GetById(x => x.Id == id);
                 if (categoria == null)
                 {
                     _logger.LogInformation($"<===========GET api/categorias/id = {id} NOT FOUND ====================>");
@@ -72,67 +96,15 @@ namespace APICatalago.Controllers
 
         }
 
-        // Código de listagem asyncrona
-
-        //[HttpGet("saudacao/{nome}")]
-        //public ActionResult<string> GetSaudacao([FromServices] IMeuServico meuservico,
-        //   string nome)
-        //{
-        //    return meuservico.Saudacao(nome);
-        //}
-
-        //[HttpGet]
-        //public async Task<ActionResult<IEnumerable<Categoria>>> GetAsync()
-        //{
-        //    _logger.LogInformation("<===========GET api/categorias ====================>");
-
-        //    try
-        //    {
-        //        return await _uof.Categorias.AsNoTracking().ToListAsync();
-        //    }
-        //    catch (Exception)
-        //    {
-        //        return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao tentar obter as categorias do banco de dados!");
-        //    }
-        //}
-
-        //[HttpGet("produtos")]
-        //public async Task<ActionResult<IEnumerable<Categoria>>> GetCategoriasProdutosAsync()
-        //{
-        //    _logger.LogInformation("<===========GET api/categorias/produtos ====================>");
-
-        //    return await _uof.Categorias.Include(x=> x.Produtos).ToListAsync();
-        //}
-
-        //[HttpGet("{id:int:min(1)}", Name = "ObterCategoria")]
-        //public async Task<ActionResult<Categoria>> GetIdAsync(int id)
-        //{
-        //    _logger.LogInformation($"<===========GET api/categorias/id = {id} ====================>");
-
-        //    try
-        //    {
-        //        var categoria = await _uof.Categorias.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
-        //        if (categoria == null)
-        //        {
-        //            _logger.LogInformation($"<===========GET api/categorias/id = {id} NOT FOUND ====================>");
-        //            return NotFound($"A categoria com id={id} não foi encontrada");
-        //        }
-        //        return categoria;
-        //    }
-        //    catch (Exception)
-        //    {
-        //        return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao tentar obter a categoria do banco de dados!");
-        //    }
-
-        //}
+       
 
         [HttpPost]
-        public ActionResult Post([FromBody] Categoria categoria)
+        public async Task<ActionResult> Post([FromBody] Categoria categoria)
         {
             try
             {
                 _uof.CategoriaRepository.Add(categoria);
-                _uof.Commit();
+                await _uof.Commit();
 
                 return new CreatedAtRouteResult("ObterCategoria", new { id = categoria.Id }, categoria);
             }
@@ -144,7 +116,7 @@ namespace APICatalago.Controllers
         }
 
         [HttpPut("{id}")]
-        public ActionResult Put(int id, [FromBody] Categoria categoria)
+        public async Task<ActionResult> Put(int id, [FromBody] Categoria categoria)
         {
             try
             {
@@ -154,7 +126,7 @@ namespace APICatalago.Controllers
                 }
 
                 _uof.CategoriaRepository.Update(categoria);
-                _uof.Commit();
+                await _uof.Commit();
                 return Ok($"Categoria com id={id} foi atualizada com sucesso!");
             }
             catch (Exception)
@@ -165,12 +137,12 @@ namespace APICatalago.Controllers
         }
 
         [HttpDelete("{id}")]
-        public ActionResult<Categoria> Delete(int id)
+        public async Task<ActionResult<Categoria>> Delete(int id)
         {
             try
             {
                 //var categoria = _uof.Categorias.FirstOrDefault(p => p.Id == id); //sempre vai no banco de dados
-                var categoria = _uof.CategoriaRepository.GetById(c => c.Id == id); // vai na memória primeiro, mas só pode ser usado se o Id for a chave primária
+                var categoria = await _uof.CategoriaRepository.GetById(c => c.Id == id); // vai na memória primeiro, mas só pode ser usado se o Id for a chave primária
 
                 if (categoria == null)
                 {
@@ -178,7 +150,7 @@ namespace APICatalago.Controllers
                 }
 
                 _uof.CategoriaRepository.Delete(categoria);
-                _uof.Commit();
+                await _uof.Commit();
                 return categoria;
             }
             catch (Exception)
@@ -189,3 +161,72 @@ namespace APICatalago.Controllers
 
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Código de listagem asyncrona
+
+//[HttpGet("saudacao/{nome}")]
+//public ActionResult<string> GetSaudacao([FromServices] IMeuServico meuservico,
+//   string nome)
+//{
+//    return meuservico.Saudacao(nome);
+//}
+
+//[HttpGet]
+//public async Task<ActionResult<IEnumerable<Categoria>>> GetAsync()
+//{
+//    _logger.LogInformation("<===========GET api/categorias ====================>");
+
+//    try
+//    {
+//        return await _uof.Categorias.AsNoTracking().ToListAsync();
+//    }
+//    catch (Exception)
+//    {
+//        return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao tentar obter as categorias do banco de dados!");
+//    }
+//}
+
+//[HttpGet("produtos")]
+//public async Task<ActionResult<IEnumerable<Categoria>>> GetCategoriasProdutosAsync()
+//{
+//    _logger.LogInformation("<===========GET api/categorias/produtos ====================>");
+
+//    return await _uof.Categorias.Include(x=> x.Produtos).ToListAsync();
+//}
+
+//[HttpGet("{id:int:min(1)}", Name = "ObterCategoria")]
+//public async Task<ActionResult<Categoria>> GetIdAsync(int id)
+//{
+//    _logger.LogInformation($"<===========GET api/categorias/id = {id} ====================>");
+
+//    try
+//    {
+//        var categoria = await _uof.Categorias.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+//        if (categoria == null)
+//        {
+//            _logger.LogInformation($"<===========GET api/categorias/id = {id} NOT FOUND ====================>");
+//            return NotFound($"A categoria com id={id} não foi encontrada");
+//        }
+//        return categoria;
+//    }
+//    catch (Exception)
+//    {
+//        return StatusCode(StatusCodes.Status500InternalServerError, "Erro ao tentar obter a categoria do banco de dados!");
+//    }
+
+//}

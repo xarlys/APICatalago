@@ -24,6 +24,6 @@ namespace APICatalago
 
 
         //Definindo propriedades de navegação
-        public ICollection<Produto> Produtos { get; set; }
+        public ICollection<Produto>? Produtos { get; set; }
     }
 }

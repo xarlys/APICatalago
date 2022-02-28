@@ -1,7 +1,10 @@
-﻿namespace APICatalago.Repository
+﻿using APICatalago.Pagination;
+
+namespace APICatalago.Repository
 {
     public interface ICategoriaRepository : IRepository<Categoria>
     {
-        IEnumerable<Categoria> GetCategoriasProdutos();
+        Task<PagedList<Categoria>> GetCategorias(Parameters produtos);
+        Task<IEnumerable<Categoria>> GetCategoriasProdutos();
     }
 }

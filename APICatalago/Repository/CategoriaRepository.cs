@@ -1,4 +1,5 @@
 ﻿using APICatalago.Models.Context;
+using APICatalago.Pagination;
 using Microsoft.EntityFrameworkCore;
 
 namespace APICatalago.Repository
@@ -9,9 +10,13 @@ namespace APICatalago.Repository
         {
         }
 
-        public IEnumerable<Categoria> GetCategoriasProdutos()
+        public async Task<PagedList<Categoria>> GetCategorias(Parameters parameters)
         {
-            return Get().Include(x => x.Produtos);
+            return await PagedList<Categoria>.ToPagedList(Get().OrderBy(on => on.Id), parameters.PageNumber, parameters.PageSize);
+        }
+        public async Task<IEnumerable<Categoria>> GetCategoriasProdutos()
+        {
+            return await Get().Include(x => x.Produtos).ToListAsync();
         }
     }
 }
