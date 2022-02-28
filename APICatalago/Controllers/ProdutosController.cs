@@ -1,8 +1,10 @@
 ﻿using APICatalago.DTOs;
 using APICatalago.Filters;
+using APICatalago.Pagination;
 using APICatalago.Repository;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace APICatalago.Controllers
 {
@@ -30,12 +32,23 @@ namespace APICatalago.Controllers
 
         [HttpGet]
         [ServiceFilter(typeof(ApiLoggingFilter))]
-        public ActionResult<IEnumerable<ProdutoDTO>> Get()
+        public ActionResult<IEnumerable<ProdutoDTO>> Get([FromQuery] Parameters produtosParameter)
         {
-            var produtos = _uof.ProdutoRepository.Get().ToList();
-            var produtosDTO = _mapper.Map<List<ProdutoDTO>>(produtos);
 
+            var resultProdutos = _uof.ProdutoRepository.GetProdutos(produtosParameter);
+
+            var metadata = new { resultProdutos.TotalCount, resultProdutos.PageSize, resultProdutos.CurrentPage, resultProdutos.TotalPages, resultProdutos.HasNext, resultProdutos.HasPrevious };
+
+            Response.Headers.Add("X-Pagination", JsonSerializer.Serialize(metadata));
+            
+            var produtosDTO = _mapper.Map<List<ProdutoDTO>>(resultProdutos);
             return produtosDTO;
+
+            //var produtos = _uof.ProdutoRepository.Get().ToList();
+            //var produtosDTO = _mapper.Map<List<ProdutoDTO>>(produtos);
+
+            //return produtosDTO;
+
             //return _uof.ProdutoRepository.Get().ToList();
             //return _context.Produtos.AsNoTracking().ToList();
         }

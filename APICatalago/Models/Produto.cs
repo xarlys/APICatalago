@@ -18,7 +18,9 @@ namespace APICatalago
         public string? Descricao { get; set; }
 
         [Required]
+        [DataType(DataType.Currency)]
         [Column(TypeName = "decimal(10,2)")]
+        //[Range(1,100000), ErrorMessage = "O Preço deve estar entre {1} e {2}"]
         public decimal Preco { get; set; }
 
         [Required]
